@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "module": "commonjs",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "jsx": "react",
+    "paths": {
+      "*": ["node_modules/*"],
+      "Pages/*": ["src/Pages/*"],
+      "Components/*": ["src/Components/*"],
+      "Layouts/*": ["src/Layouts/*"]
+    },
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
