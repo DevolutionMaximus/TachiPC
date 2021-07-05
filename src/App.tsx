@@ -6,4 +6,4 @@ function render() {
     ReactDOM.render(<Main />, document.body);
 }
 
-render();
+render();   
