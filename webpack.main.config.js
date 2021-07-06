@@ -16,6 +16,7 @@ module.exports = {
       Components: path.resolve(__dirname, 'src/Components/'),
       Layouts: path.resolve(__dirname, 'src/Layouts/'),
       Pages: path.resolve(__dirname, 'src/Pages/'),
+      Extensions: path.resolve(__dirname, 'src/Extensions/'),
     }
   },
 };
