@@ -70,6 +70,21 @@ type MangadexError = {
     }>
 }
 
+type MangaListOptions = {
+    limit: number,
+    offset: number, 
+    title: string,
+    authors: Array<string>,
+    artists: Array<string>,
+    year: number,
+    includedTags: Array<string>
+}
+
+type TagEntry = {
+    id: string,
+
+}
+
 const mangadexInstance = axios.create({
     baseURL: 'https://api.mangadex.org/',
 
@@ -79,9 +94,21 @@ const mangadexConfigDefaults = {
     refreshToken: '',
     sessionToken: '',
     username: '',
+    tags: []
+}
+
+const mangadexUserConfigDefaults = {
+    contentRating: [
+        ContentRating.SAFE,
+        ContentRating.SUGGESTIVE
+    ],
+    locale: 'en',
+    mangaLimit: 30,
+    chapterLimit: 100,
 }
 
 const mangadexStore = new Store(path.join('extensions', 'mangadex', 'config'), mangadexConfigDefaults)
+const mangadexUserStore = new Store(path.join('extensions', 'mangadex', 'userConfig'), mangadexUserConfigDefaults)
 
 const handleError = (event: Electron.IpcMainEvent, error: unknown|AxiosError) => {
     if (axios.isAxiosError(error)) {
@@ -110,54 +137,40 @@ const handleError = (event: Electron.IpcMainEvent, error: unknown|AxiosError) =>
     }
 }
 
-ipcMain.on('auth-login', async (event, username: string, password: string) => {
-    try {
-        let response = await axios.post('/auth/login', {
-                'username': username,
-                'password': password
-            })
-        let data: AuthLoginResponse = response.data
-        mangadexStore.set('sessionToken', data.token.session)
-        mangadexStore.set('refreshToken', data.token.refresh)
-        mangadexInstance.defaults.headers.common['Authorization'] = `Bearer ${data.token.session}`
-        event.reply('mangadex-auth-login-success', '')
-    }
-    catch (error: unknown|AxiosError) {
-        handleError(event, error)
-    }
-})
-
-ipcMain.on('auth-check', async (event) => {
-    try {
-        let response = await axios.get('/auth/check')
-        let data: AuthCheckResponse = response.data
-        event.reply('mangadex-auth-check-success', data.isAuthenticated)
-    }
-    catch (error: unknown|AxiosError) {
-        handleError(event, error)
-    }
-})
-
-ipcMain.on('auth-logout', async (event) => {
-    try {
-        let response = await axios.post('/auth/logout')
-    }
-    catch (error: unknown|AxiosError) {
-        handleError(event, error)
-    }
-})
-
-ipcMain.on('auth-refresh-token', async (event) => {
-    try {
-        let response = await axios.post('/auth/refresh', {
-            'token': mangadexStore.get('refreshToken')
+const login = async (username: string, password: string) => {
+    let response = await axios.post('/auth/login', {
+            'username': username,
+            'password': password
         })
-        let data: AuthRefreshResponse = response.data
-        mangadexStore.set('sessionToken', data.token.session)
-        mangadexStore.set('refreshToken', data.token.refresh)
-    }
-    catch (error: unknown|AxiosError) {
-        handleError(event, error)
-    }
-})
+    let data: AuthLoginResponse = response.data
+    mangadexStore.set('sessionToken', data.token.session)
+    mangadexStore.set('refreshToken', data.token.refresh)
+    mangadexInstance.defaults.headers.common['Authorization'] = `Bearer ${data.token.session}`
+}
 
+const isAuthenticated = async () => {
+    let response = await axios.get('/auth/check')
+    let data: AuthCheckResponse = response.data
+    return data.isAuthenticated
+}
+
+const logout = async () => {
+    let response = await axios.post('/auth/logout')
+}
+
+const refreshToken = async () => {
+    let response = await axios.post('/auth/refresh', {
+        'token': mangadexStore.get('refreshToken')
+    })
+    let data: AuthRefreshResponse = response.data
+    mangadexStore.set('sessionToken', data.token.session)
+    mangadexStore.set('refreshToken', data.token.refresh)
+}
+
+const initTags = async () => {
+
+}
+
+const getMangaList = async (options: MangaListOptions) => {
+
+}
