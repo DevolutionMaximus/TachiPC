@@ -6,70 +6,51 @@ import Bottleneck from 'bottleneck'
 
 //TODO: logging
 
-enum PublicationDemographic {
-    SHOUNEN = 'shounen',
-    SHOUJO = 'shoujo',
-    JOSEI = 'josei',
-    SEINEN = 'seinen',
-    NONE = 'none'
-}
+type PublicationDemographic = 'shounen' | 'shoujo' | 'josei' | 'seinen' | 'none'
 
-enum Status {
-    ONGOING = 'ongoing',
-    COMPLETED = 'completed',
-    HIATUS = 'hiatus',
-    CANCELLED = 'cancelled'
-}
+type Status = 'ongoing' | 'completed' | 'hiatus' | 'cancelled'
 
-enum ContentRating {
-    SAFE = 'safe',
-    SUGGESTIVE = 'suggestive',
-    EROTICA = 'erotica',
-    PORNOGRAPHIC = 'pornographic',
-    NONE = 'none'
-}
+type ContentRating = 'safe' | 'suggestive' | 'erotica' | 'pornographic' | 'none'
 
-enum TagsMode {
-    AND = 'AND',
-    OR = 'OR'
-}
+type TagsMode = 'AND' | 'OR'
 
-enum ResultEnum {
-    OK = 'ok',
-    ERROR = 'error'
-}
+type ResultUnion = 'ok' | 'error'
 
-enum OrderEnum {
-    ASCENDING = 'asc',
-    DESCENDING = 'desc'
-}
+type OrderUnion = 'asc' | 'desc'
 
-enum TypeEnum {
-    MANGA = 'manga',
-    CHAPTER = 'chapter',
-    COVER_ART = 'cover_art',
-    AUTHOR = 'author',
-    ARTIST = 'artist',
-    SCANLATION_GROUP = 'scanlation_group',
-    TAG = 'tag',
-    USER = 'user',
-    CUSTOM_LIST = 'custom_list'
-}
+type TypeUnion = 'manga' | 'chapter' | 'cover_art' | 'author' | 'artist' | 'scanlation_group' | 'tag' | 'user' | 'custom_list'
 
-enum KnownOriginalLanguages {
-    JAPANESE = 'ja',
-    KOREAN = 'ko',
-    CHINESE = 'zh'
-}
+type Visibility = 'private' | 'public'
 
-type Relationship = {
+type KnownOriginalLanguages = 'ja' | 'ko' | 'zh'
+
+type ResponseObject<T, A extends TypeUnion> = {
     id: string,
-    type: TypeEnum,
-    attributes?: Object
+    type: A,
+    attributes: T
 }
+
+//relationship amen'd
+type Response<T, A extends TypeUnion, R extends RelationshipAttributes = undefined> = {
+    result: ResultUnion,
+    data: T
+} & ([R] extends [undefined] ? {
+    relationships: Array<RelationshipSubset<RelationshipAttributes, A>>
+} : {
+    relationships: Array<RelationshipSubset<RelationshipAttributes, A, R>>
+})
+
+type RelationshipAttributes = AuthorAttributes | MangaAttributes | CoverAttributes | ScanlationGroupAttributes | CustomListAttributes | UserAttributes | ChapterAttributes | TagAttributes
+
+type RelationshipSubset<T, A extends TypeUnion, U extends T = undefined> = {
+    id: string,
+    type: A,
+} & (U extends undefined ? {} : {
+    attributes?: U
+})
 
 type AuthLoginResponse = {
-    result: ResultEnum,
+    result: ResultUnion,
     token: {
         session: string,
         refresh: string
@@ -77,14 +58,14 @@ type AuthLoginResponse = {
 }
 
 type AuthCheckResponse = {
-    result: ResultEnum,
+    result: ResultUnion,
     isAuthenticated: boolean
     roles: Array<string>,
     permissions: Array<string>
 }
 
 type AuthRefreshResponse = {
-    result: ResultEnum,
+    result: ResultUnion,
     token: {
         session: string,
         refresh: string
@@ -103,17 +84,9 @@ type TagAttributes = {
     version: number
 }
 
-type Tag = {
-    id: string,
-    type: TypeEnum,
-    attributes: TagAttributes
-}
+type Tag = ResponseObject<TagAttributes, 'tag'>
 
-type TagResponse = Array<{
-    result: ResultEnum,
-    data: Tag,
-    relationships: Array<Relationship>
-}>
+type TagResponse = Array<Response<Tag, 'tag'>>
 
 type MangaAttributes = {
     title: LocalizedString,
@@ -123,7 +96,7 @@ type MangaAttributes = {
     links: {
         [link: string]: string
     },
-    originalLanguage: string,
+    originalLanguage: KnownOriginalLanguages,
     lastVolume: string | null,
     lastChapter: string | null,
     publicationDemographic: PublicationDemographic | null,
@@ -136,17 +109,9 @@ type MangaAttributes = {
     updatedAt: string
 }
 
-type Manga = {
-    id: string,
-    type: TypeEnum,
-    attributes: MangaAttributes,
-}
+type Manga = ResponseObject<MangaAttributes, 'manga'>
 
-type MangaResponse = {
-    result: ResultEnum,
-    data: Manga,
-    relationships: Array<Relationship>
-}
+type MangaResponse = Response<Manga, 'manga', AuthorAttributes | CoverAttributes>
 
 type MangaListResponse = {
     results: Array<MangaResponse>,
@@ -164,17 +129,9 @@ type CoverAttributes = {
     updatedAt: string
 }
 
-type Cover = {
-    id: string,
-    type: TypeEnum,
-    attributes: CoverAttributes
-}
+type Cover = ResponseObject<CoverAttributes, 'cover_art'>
 
-type CoverResponse = {
-    result: ResultEnum,
-    data: Cover,
-    relationships: Array<Relationship>
-}
+type CoverResponse = Response<Cover, 'cover_art', MangaAttributes | UserAttributes>
 
 type CoverListResponse = {
     results: Array<CoverResponse>,
@@ -198,17 +155,9 @@ type ChapterAttributes = {
     publishAt: string
 }
 
-type Chapter = {
-    id: string,
-    type: TypeEnum,
-    attributes: ChapterAttributes
-}
+type Chapter = ResponseObject<ChapterAttributes, 'chapter'>
 
-type ChapterResponse = {
-    result: ResultEnum,
-    data: Chapter,
-    relationships: Array<Relationship>
-}
+type ChapterResponse = Response<Chapter, 'chapter', ScanlationGroupAttributes | MangaAttributes | UserAttributes>
 
 type ChapterListResponse = {
     results: Array<ChapterResponse>,
@@ -217,8 +166,57 @@ type ChapterListResponse = {
     total: number
 }
 
+type UserAttributes = {
+    username: string,
+    version: number
+}
+
+type User = ResponseObject<UserAttributes, 'user'>
+
+type UserResponse = Response<User, 'user'>
+
+type ScanlationGroupAttributes = {
+    name: string,
+    leader: User,
+    locked: boolean,
+    version: number,
+    createdAt: string,
+    updatedAt: string
+}
+
+type ScanlationGroup = ResponseObject<ScanlationGroupAttributes, 'scanlation_group'>
+
+type ScanlationGroupResponse = Response<ScanlationGroup, 'scanlation_group'>
+
+type AuthorAttributes = {
+    name: string,
+    imageUrl: string,
+    biography: {
+        [entry: string]: string
+    },
+    version: number,
+    createdAt: string,
+    updatedAt: string
+}
+
+type Author = ResponseObject<AuthorAttributes, 'author' | 'artist'>
+
+type AuthorResponse = Response<Author, 'author' | 'artist', MangaAttributes>
+
+type CustomListAttributes = {
+    name: string,
+    visibility: Visibility,
+    owner: User,
+    version: number
+}
+
+type CustomList = ResponseObject<CustomListAttributes, 'custom_list'>
+
+//needs auth to view relationships
+type CustomListResponse = Response<CustomList, 'custom_list'>
+
 type MangadexError = {
-    result: ResultEnum,
+    result: ResultUnion,
     errors: Array<{
         id: string,
         status: number,
@@ -227,64 +225,56 @@ type MangadexError = {
     }>
 }
 
-enum MangaIncludes {
-    AUTHOR = 'author',
-    COVER_ART = 'cover_art',
-    ARTIST = 'artist'
-}
+type MangaListIncludes = Extract<TypeUnion, 'author' | 'cover_art' | 'artist'>
 
 type MangaListOptions = {
-    limit: number,
-    offset: number, 
-    title: string,
-    authors: Array<string>,
-    artists: Array<string>,
-    year: number,
-    includedTags: Array<string>,
-    includedTagsMode: TagsMode,
-    excludedTags: Array<string>,
-    status: Array<Status>,
-    originalLanguage: KnownOriginalLanguages,
-    publicationDemographic: Array<PublicationDemographic>,
-    ids: Array<string>,
-    contentRating: Array<ContentRating>,
-    createdAtSince: string,
-    updatedAtSince: string,
-    order: {
-        createdAt: OrderEnum,
-        updatedAt: OrderEnum
+    limit?: number,
+    offset?: number, 
+    title?: string,
+    authors?: Array<string>,
+    artists?: Array<string>,
+    year?: number,
+    includedTags?: Array<string>,
+    includedTagsMode?: TagsMode,
+    excludedTags?: Array<string>,
+    status?: Array<Status>,
+    originalLanguage?: KnownOriginalLanguages,
+    publicationDemographic?: Array<PublicationDemographic>,
+    ids?: Array<string>,
+    contentRating?: Array<ContentRating>,
+    createdAtSince?: string,
+    updatedAtSince?: string,
+    order?: {
+        createdAt?: OrderUnion,
+        updatedAt?: OrderUnion
     },
-    includes: Array<MangaIncludes>
+    includes?: Array<MangaListIncludes>
 }
 
-enum ChapterIncludes {
-    SCANLATION_GROUP = 'scanlation_group',
-    MANGA = 'manga',
-    USER = 'user'
-}
+type ChapterListIncludes = Extract<TypeUnion, 'scanlation_group' | 'manga' | 'user'>
 
 type ChapterListOptions = {
-    limit: number,
-    offset: number,
-    ids: Array<string>,
-    title: string,
-    groups: Array<string>,
-    uploader: string,
-    manga: string,
-    volume: string | Array<string>,
-    chapter: string | Array<string>,
-    translatedLanguage: Array<string>,
-    createdAtSince: string,
-    updatedAtSince: string,
-    publishAtSince: string,
-    order: {
-        createdAt: OrderEnum,
-        updatedAt: OrderEnum,
-        publishAt: OrderEnum,
-        volume: OrderEnum,
-        chapter: OrderEnum
+    limit?: number,
+    offset?: number,
+    ids?: Array<string>,
+    title?: string,
+    groups?: Array<string>,
+    uploader?: string,
+    manga?: string,
+    volume?: string | Array<string>,
+    chapter?: string | Array<string>,
+    translatedLanguage?: Array<string>,
+    createdAtSince?: string,
+    updatedAtSince?: string,
+    publishAtSince?: string,
+    order?: {
+        createdAt?: OrderUnion,
+        updatedAt?: OrderUnion,
+        publishAt?: OrderUnion,
+        volume?: OrderUnion,
+        chapter?: OrderUnion
     },
-    includes: Array<ChapterIncludes>
+    includes?: Array<ChapterListIncludes>
 }
 
 type TagEntry = {
@@ -299,10 +289,7 @@ const mangadexConfigDefaults = {
 }
 
 const mangadexUserConfigDefaults = {
-    contentRating: [
-        ContentRating.SAFE,
-        ContentRating.SUGGESTIVE
-    ],
+    contentRating: ['safe', 'suggestive'] as Array<ContentRating>,
     locale: 'en',
     mangaLimit: 30,
     chapterLimit: 100,
@@ -479,5 +466,31 @@ const getLoginStatus = () => {
 }
 
 const getMangaList = async (options: MangaListOptions) => {
-
+    let response = await globalLimiter.schedule(() => axios.get('/manga', {params: options}))
+    let data: MangaListResponse = response.data
+    let reply: Array<{
+        id: string,
+        name: string,
+        cover_art: string,
+        description: string,
+        publicationDemographic: PublicationDemographic,
+        contentRating: ContentRating,
+        tags: Array<Tag>,
+        originalLanguage: KnownOriginalLanguages,
+        status: Status
+    }>
+    for (let i = 0; i < data.results.length; i++) {
+        reply.push({
+            id: data.results[i].data.id,
+            name: data.results[i].data.attributes.title.en,
+            cover_art: data.results[i].relationships.filter((value) => value.type == 'cover_art')[0].attributes.fileName,
+            description: data.results[i].data.attributes.description.en,
+            publicationDemographic: data.results[i].data.attributes.publicationDemographic,
+            contentRating: data.results[i].data.attributes.contentRating,
+            tags: data.results[i].data.attributes.tags,
+            originalLanguage: data.results[i].data.attributes.originalLanguage,
+            status: data.results[i].data.attributes.status
+        })
+    }
+    return reply
 }
