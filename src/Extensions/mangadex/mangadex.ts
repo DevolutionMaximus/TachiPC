@@ -24,30 +24,28 @@ type Visibility = 'private' | 'public'
 
 type KnownOriginalLanguages = 'ja' | 'ko' | 'zh'
 
+type AllAttributes = AuthorAttributes | MangaAttributes | CoverAttributes | ScanlationGroupAttributes | CustomListAttributes | UserAttributes | ChapterAttributes | TagAttributes
+
 type ResponseObject<T, A extends TypeUnion> = {
     id: string,
     type: A,
     attributes: T
 }
 
-//relationship amen'd
-type Response<T, A extends TypeUnion, R extends RelationshipAttributes = undefined> = {
+type PartialResponseObject<T extends ResponseObject<AllAttributes, TypeUnion> = undefined> = T extends undefined ? {
+    id: string,
+    type: TypeUnion
+} : {
+    id: T['id'],
+    type: T['type'],
+    attributes?: T['attributes']
+}
+
+type Response<T extends ResponseObject<AllAttributes, TypeUnion>, R extends ResponseObject<AllAttributes, TypeUnion> = undefined> = {
     result: ResultUnion,
     data: T
-} & ([R] extends [undefined] ? {
-    relationships: Array<RelationshipSubset<RelationshipAttributes, A>>
-} : {
-    relationships: Array<RelationshipSubset<RelationshipAttributes, A, R>>
-})
-
-type RelationshipAttributes = AuthorAttributes | MangaAttributes | CoverAttributes | ScanlationGroupAttributes | CustomListAttributes | UserAttributes | ChapterAttributes | TagAttributes
-
-type RelationshipSubset<T, A extends TypeUnion, U extends T = undefined> = {
-    id: string,
-    type: A,
-} & (U extends undefined ? {} : {
-    attributes?: U
-})
+    relationships: Array<PartialResponseObject<R>>
+}
 
 type AuthLoginResponse = {
     result: ResultUnion,
@@ -86,8 +84,6 @@ type TagAttributes = {
 
 type Tag = ResponseObject<TagAttributes, 'tag'>
 
-type TagResponse = Array<Response<Tag, 'tag'>>
-
 type MangaAttributes = {
     title: LocalizedString,
     altTitles: Array<LocalizedString>,
@@ -111,15 +107,6 @@ type MangaAttributes = {
 
 type Manga = ResponseObject<MangaAttributes, 'manga'>
 
-type MangaResponse = Response<Manga, 'manga', AuthorAttributes | CoverAttributes>
-
-type MangaListResponse = {
-    results: Array<MangaResponse>,
-    limit: number,
-    offset: number,
-    total: number
-}
-
 type CoverAttributes = {
     volume: string | null,
     fileName: string,
@@ -130,15 +117,6 @@ type CoverAttributes = {
 }
 
 type Cover = ResponseObject<CoverAttributes, 'cover_art'>
-
-type CoverResponse = Response<Cover, 'cover_art', MangaAttributes | UserAttributes>
-
-type CoverListResponse = {
-    results: Array<CoverResponse>,
-    limit: number,
-    offset: number,
-    total: number
-}
 
 type ChapterAttributes = {
     title: string,
@@ -157,23 +135,12 @@ type ChapterAttributes = {
 
 type Chapter = ResponseObject<ChapterAttributes, 'chapter'>
 
-type ChapterResponse = Response<Chapter, 'chapter', ScanlationGroupAttributes | MangaAttributes | UserAttributes>
-
-type ChapterListResponse = {
-    results: Array<ChapterResponse>,
-    limit: number,
-    offset: number,
-    total: number
-}
-
 type UserAttributes = {
     username: string,
     version: number
 }
 
 type User = ResponseObject<UserAttributes, 'user'>
-
-type UserResponse = Response<User, 'user'>
 
 type ScanlationGroupAttributes = {
     name: string,
@@ -185,8 +152,6 @@ type ScanlationGroupAttributes = {
 }
 
 type ScanlationGroup = ResponseObject<ScanlationGroupAttributes, 'scanlation_group'>
-
-type ScanlationGroupResponse = Response<ScanlationGroup, 'scanlation_group'>
 
 type AuthorAttributes = {
     name: string,
@@ -201,8 +166,6 @@ type AuthorAttributes = {
 
 type Author = ResponseObject<AuthorAttributes, 'author' | 'artist'>
 
-type AuthorResponse = Response<Author, 'author' | 'artist', MangaAttributes>
-
 type CustomListAttributes = {
     name: string,
     visibility: Visibility,
@@ -212,8 +175,51 @@ type CustomListAttributes = {
 
 type CustomList = ResponseObject<CustomListAttributes, 'custom_list'>
 
+type TagResponse = Array<Response<Tag>>
+
+type MangaResponse = Response<Manga, Author | Cover>
+
+type MangaListResponse = {
+    results: Array<MangaResponse>,
+    limit: number,
+    offset: number,
+    total: number
+}
+
+type CoverResponse = Response<Cover, Manga | User>
+
+type CoverListResponse = {
+    results: Array<CoverResponse>,
+    limit: number,
+    offset: number,
+    total: number
+}
+
+type ChapterResponse = Response<Chapter, ScanlationGroup | Manga | User>
+
+type ChapterListResponse = {
+    results: Array<ChapterResponse>,
+    limit: number,
+    offset: number,
+    total: number
+}
+
+type ScanlationGroupResponse = Response<ScanlationGroup, User>
+
+type UserResponse = Response<User>
+
+type AuthorResponse = Response<Author, Manga>
+
 //needs auth to view relationships
-type CustomListResponse = Response<CustomList, 'custom_list'>
+type CustomListResponse = Response<CustomList>
+
+const isResponseObject = <T extends ResponseObject<AllAttributes, TypeUnion>>(item: ResponseObject<AllAttributes, TypeUnion>, type: TypeUnion): item is T => {
+    return (item.type === type)
+}
+
+const isPartialResponseObject = <T extends ResponseObject<AllAttributes, TypeUnion>>(item: PartialResponseObject<ResponseObject<AllAttributes, TypeUnion>>, type: TypeUnion): item is PartialResponseObject<T> => {
+    return (item.type === type)
+}
 
 type MangadexError = {
     result: ResultUnion,
@@ -465,7 +471,7 @@ const getLoginStatus = () => {
     return isAuthenticated
 }
 
-const getMangaList = async (options: MangaListOptions) => {
+const getMangaList = async (options: MangaListOptions = {contentRating: mangadexUserStore.get('contentRating'), limit: mangadexUserStore.get('mangaLimit')}) => {
     let response = await globalLimiter.schedule(() => axios.get('/manga', {params: options}))
     let data: MangaListResponse = response.data
     let reply: Array<{
@@ -483,8 +489,8 @@ const getMangaList = async (options: MangaListOptions) => {
         reply.push({
             id: data.results[i].data.id,
             name: data.results[i].data.attributes.title.en,
-            cover_art: data.results[i].relationships.filter((value) => value.type == 'cover_art')[0].attributes.fileName,
-            description: data.results[i].data.attributes.description.en,
+            cover_art: data.results[i].relationships.filter((value: PartialResponseObject<ResponseObject<AllAttributes, TypeUnion>>): value is Cover => isPartialResponseObject<Cover>(value, 'cover_art'))[0].attributes.fileName,
+            description: data.results[i].data.attributes.description.en ? data.results[i].data.attributes.description.en : '',
             publicationDemographic: data.results[i].data.attributes.publicationDemographic,
             contentRating: data.results[i].data.attributes.contentRating,
             tags: data.results[i].data.attributes.tags,
@@ -492,5 +498,29 @@ const getMangaList = async (options: MangaListOptions) => {
             status: data.results[i].data.attributes.status
         })
     }
-    return reply
+    return {data: reply, total: data.total}
+}
+
+const getChapterList = async (options: ChapterListOptions = {limit: mangadexUserStore.get('chapterLimit')}) => {
+    let response = await globalLimiter.schedule(() => axios.get('/chapter', {params: options}))
+    let data: ChapterListResponse = response.data
+    let reply: Array<{
+        id: string,
+        volume: string,
+        chapter: string,
+        title: string,
+        updatedAt: string,
+        groupName: string
+    }>
+    for (let i = 0; i < data.results.length; i++) {
+        reply.push({
+            id: data.results[i].data.id,
+            volume: data.results[i].data.attributes.volume,
+            chapter: data.results[i].data.attributes.chapter,
+            title: data.results[i].data.attributes.title,
+            updatedAt: data.results[i].data.attributes.updatedAt,
+            groupName: data.results[i].relationships.filter((value: PartialResponseObject<ResponseObject<AllAttributes, TypeUnion>>): value is ScanlationGroup => isPartialResponseObject<ScanlationGroup>(value, 'scanlation_group'))[0].attributes.name
+        })
+    }
+    return {data: reply, total: data.total}
 }
