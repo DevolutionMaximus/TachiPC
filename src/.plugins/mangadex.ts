@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import Store from '../../config'
+import Store from '../config'
 import path from 'path'
 import Bottleneck from 'bottleneck'
 
@@ -289,6 +289,14 @@ type TagEntry = {
     group: string
 }
 
+type ChapterCache = {
+    [id: string]: {
+        data: Array<string>,
+        dataSaver: Array<string>,
+        hash: string
+    }
+}
+
 const mangadexConfigDefaults = {
     refreshToken: '',
     username: '',
@@ -314,6 +322,7 @@ let tagList: Array<TagEntry>
 let isAuthenticated = false
 let sessionToken = ''
 let initErrors: Array<{ status: number, details: string }>
+let chapterCache: ChapterCache
 
 const init = async () => {
     const token = mangadexStore.get('refreshToken')
@@ -521,6 +530,43 @@ const getChapterList = async (options: ChapterListOptions = {limit: mangadexUser
             updatedAt: data.results[i].data.attributes.updatedAt,
             groupName: data.results[i].relationships.filter((value: PartialResponseObject<ResponseObject<AllAttributes, TypeUnion>>): value is ScanlationGroup => isPartialResponseObject<ScanlationGroup>(value, 'scanlation_group'))[0].attributes.name
         })
+        chapterCache[data.results[i].data.id] = {
+            data: data.results[i].data.attributes.data,
+            dataSaver: data.results[i].data.attributes.dataSaver,
+            hash: data.results[i].data.attributes.hash
+        }
     }
     return {data: reply, total: data.total}
+}
+
+const getChapter = async (chapterId: string) => {
+    let response = await globalLimiter.schedule(() => axios.get(`/chapter/${chapterId}`))
+    let data: ChapterResponse = response.data
+    let reply = {
+        id: data.data.id,
+        volume: data.data.attributes.volume,
+        chapter: data.data.attributes.chapter,
+        title: data.data.attributes.title,
+        updatedAt: data.data.attributes.updatedAt,
+        groupName: data.relationships.filter((value: PartialResponseObject<ResponseObject<AllAttributes, TypeUnion>>): value is ScanlationGroup => isPartialResponseObject<ScanlationGroup>(value, 'scanlation_group'))[0].attributes.name
+    }
+    chapterCache[data.data.id] = {
+        data: data.data.attributes.data,
+        dataSaver: data.data.attributes.dataSaver,
+        hash: data.data.attributes.hash
+    }
+    return reply
+}
+
+const getServerURL = async (chapterId: string): Promise<string> => {
+    let response = await globalLimiter.schedule(() => axios.get('/at-home/server/' + chapterId))
+    return response.data
+}
+
+const getPage = async (chapterId: string, pageNo: number, serverURL: string, progressEvent: (event: ProgressEvent) => void, lowQuality = false) => {
+    if (!chapterCache[chapterId]) {
+        getChapter(chapterId)
+    }
+    let response = await globalLimiter.schedule(() => axios.get(`${serverURL}/${(lowQuality ? 'data-saver' : 'data')}/${chapterCache[chapterId].hash}/${lowQuality ? chapterCache[chapterId].dataSaver[pageNo-1] : chapterCache[chapterId].data[pageNo-1]}`, {onDownloadProgress: progressEvent}))
+    return response.data
 }

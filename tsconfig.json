@@ -15,8 +15,7 @@
       "*": ["node_modules/*"],
       "Pages/*": ["src/Pages/*"],
       "Components/*": ["src/Components/*"],
-      "Layouts/*": ["src/Layouts/*"],
-      "Extensions/*": ["src/Extensions/*"]
+      "Layouts/*": ["src/Layouts/*"]
     },
   },
   "include": [
