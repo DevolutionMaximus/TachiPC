@@ -54,14 +54,17 @@ app.on('activate', () => {
 // code. You can also put them in separate files and import them here.
 
 // const pluginPath = path.join('full','path','to','TachiPC','src','.plugins') //in progress
-// let modules: Array<{
+// type DynamicModule = {
 //   id: string,
 //   name: string,
+//   searchOptions: (...opts: any) => SearchOptions //search options (sort,tags,etc)
 //   search: (...opts: any) => Array<any>, //array of manga
 //   manga: (...opts: any) => any, //manga page
 //   chapter: (...opts: any) => any, //read one chapter
 //   auth?: (...opts: any) => any, //login
-// }>
+// }
+// let modules: Array<DynamicModule>
+
 // app.whenReady().then(() => {
 //   fs.readdir(pluginPath, (error, files) => {
 //     if(error) {
@@ -70,25 +73,23 @@ app.on('activate', () => {
 //     else {
 //       for (let i = 0; i < files.length; i++) {
 //         if (path.extname(files[i]) == '.ts') {
-//           import(path.join(pluginPath, files[i])).then((module) => { //implement catch if modulename not found
-//             if (typeof module.auth === 'function') {
-//               modules.push({
+//           import(path.join(pluginPath, files[i])).then((module) => {
+//             try {
+//               let newModule: DynamicModule = {
 //                 id: uuid(),
 //                 name: module.name,
-//                 search: module.search,
-//                 manga: module.manga,
-//                 chapter: module.chapter,
-//                 auth: module.auth
-//               })
-//             }
-//             else {
-//               modules.push({
-//                 id: uuid(),
-//                 name: module.name,
+//                 searchOptions: module.searchOptions,
 //                 search: module.search,
 //                 manga: module.manga,
 //                 chapter: module.chapter
-//               })
+//               }
+//               if (typeof module.auth === 'function') {
+//                 newModule.auth = module.auth
+//               }
+//               modules.push(newModule)
+//             } catch (error) {
+//               console.error(`${files[i]} does not export required functions.`)
+//               console.error(error)
 //             }
 //           }, (reason) => console.error(reason))
 //         }
@@ -96,4 +97,3 @@ app.on('activate', () => {
 //     }
 //   })
 // }, (reason) => console.error(reason))
-

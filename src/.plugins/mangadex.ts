@@ -3,6 +3,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios'
 import Store from '../config'
 import path from 'path'
 import Bottleneck from 'bottleneck'
+import { v4 as uuid } from 'uuid'
 
 //TODO: logging
 
@@ -569,4 +570,29 @@ const getPage = async (chapterId: string, pageNo: number, serverURL: string, pro
     }
     let response = await globalLimiter.schedule(() => axios.get(`${serverURL}/${(lowQuality ? 'data-saver' : 'data')}/${chapterCache[chapterId].hash}/${lowQuality ? chapterCache[chapterId].dataSaver[pageNo-1] : chapterCache[chapterId].data[pageNo-1]}`, {onDownloadProgress: progressEvent}))
     return response.data
+}
+
+export const name = 'MangaDex'
+type SearchOptionType = 'dropdown' | 'dichip' | 'trichip'
+type SearchOptions = Array<{
+    name: string,
+    type: SearchOptionType,
+    values: Array<{
+        id: string,
+        name: string
+    }>
+}>
+export const searchOptions = (): SearchOptions => {
+    return [
+        {
+            name: 'Sort',
+            type: 'dropdown',
+            values: [
+                {
+                    id: uuid(),
+                    name: 'Ascending'
+                }
+            ]
+        }
+    ]
 }
