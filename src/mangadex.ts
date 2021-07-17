@@ -1,9 +1,8 @@
 import { ipcMain } from 'electron'
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import Store from '../config'
+import Store from './config'
 import path from 'path'
 import Bottleneck from 'bottleneck'
-import { v4 as uuid } from 'uuid'
 
 //TODO: logging
 
@@ -573,26 +572,154 @@ const getPage = async (chapterId: string, pageNo: number, serverURL: string, pro
 }
 
 export const name = 'MangaDex'
-type SearchOptionType = 'dropdown' | 'dichip' | 'trichip'
-type SearchOptions = Array<{
+type SearchOptionButtonType = 'dichip' | 'trichip'
+type SortValues = 'popular' | 'created' | 'updated'
+type FilterValues = {
     name: string,
-    type: SearchOptionType,
-    values: Array<{
-        id: string,
-        name: string
-    }>
+    type: SearchOptionButtonType,
+    value: string
+}
+type SortOptions = Array<{
+    name: string,
+    type: SearchOptionButtonType,
+    value: SortValues
 }>
-export const searchOptions = (): SearchOptions => {
-    return [
-        {
-            name: 'Sort',
-            type: 'dropdown',
-            values: [
-                {
-                    id: uuid(),
-                    name: 'Ascending'
-                }
-            ]
+type FilterOptions = Array<{
+    groupName: string,
+    values: Array<FilterValues>
+}>
+export const searchOptions = (): [SortOptions, FilterOptions] => {
+    let groupNames: Array<string>
+    for (let index = 0; index < tagList.length; index++) {
+        if (!groupNames.includes(tagList[index].group)) {
+            groupNames.push(tagList[index].group)
         }
+    }
+    let filterOptions: FilterOptions = groupNames.map(element => {
+        return {
+            groupName: `${element[0].toUpperCase()}${element.slice(1).toLowerCase()}`,
+            values: tagList.filter(tag => tag.group === element).map((filteredTag): FilterValues => {
+                return {
+                    name: filteredTag.name,
+                    type: 'trichip',
+                    value: filteredTag.id
+                }
+            })
+        }
+    })
+    filterOptions.push({
+        groupName: 'Original Language',
+        values: [
+            {
+                name: 'Korean',
+                type: 'dichip',
+                value: 'ko'
+            },
+            {
+                name: 'Japanese',
+                type: 'dichip',
+                value: 'ja'
+            },
+            {
+                name: 'Chinese',
+                type: 'dichip',
+                value: 'zh'
+            }
+        ]
+    })
+    filterOptions.push({
+        groupName: 'Status',
+        values: [
+            {
+                name: 'Ongoing',
+                type: 'dichip',
+                value: 'ongoing'
+            },
+            {
+                name: 'Completed',
+                type: 'dichip',
+                value: 'completed'
+            },
+            {
+                name: 'Hiatus',
+                type: 'dichip',
+                value: 'hiatus'
+            },
+            {
+                name: 'Cancelled',
+                type: 'dichip',
+                value: 'cancelled'
+            }
+        ]
+    })
+    filterOptions.push({
+        groupName: 'Publication Demographic',
+        values: [
+            {
+                name: 'Shounen',
+                type: 'dichip',
+                value: 'shounen'
+            },
+            {
+                name: 'Seinen',
+                type: 'dichip',
+                value: 'seinen'
+            },
+            {
+                name: 'Shoujo',
+                type: 'dichip',
+                value: 'shoujo'
+            },
+            {
+                name: 'Josei',
+                type: 'dichip',
+                value: 'josei'
+            },
+        ]
+    })
+    filterOptions.push({
+        groupName: 'Content Rating',
+        values: [
+            {
+                name: 'Safe',
+                type: 'dichip',
+                value: 'safe'
+            },
+            {
+                name: 'Suggestive',
+                type: 'dichip',
+                value: 'suggestive'
+            },
+            {
+                name: 'Erotica',
+                type: 'dichip',
+                value: 'erotica'
+            },
+            {
+                name: 'Pornographic',
+                type: 'dichip',
+                value: 'pornographic'
+            },
+        ]
+    })
+    return [
+        [
+            {
+                name: 'Popularity',
+                type: 'dichip',
+                value: 'popular'
+            },
+            {
+                name: 'Latest',
+                type: 'trichip',
+                value: 'updated'
+            },
+            {
+                name: 'Newest',
+                type: 'trichip',
+                value: 'created'
+            }
+        ],
+        filterOptions
     ]
 }

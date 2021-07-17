@@ -1,15 +1,9 @@
-type SearchOptionType = 'dropdown' | 'dichip' | 'trichip'
+type SearchOptionType = 'dropdown' | 'dichip' | 'trichip' | 'disortchip' | 'trisortchip'
 type SearchOptions = Array<{
     name: string,
     type: SearchOptionType,
     values: Array<{
-        id: string,
-        name: string
+        name: string,
+        value: string
     }>
 }>
-type MangaType = {
-    id: string,
-    title: string,
-    img: string,
-    
-}
