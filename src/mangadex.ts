@@ -572,9 +572,9 @@ const getPage = async (chapterId: string, pageNo: number, serverURL: string, pro
 }
 
 export const name = 'MangaDex'
-type SearchOptionButtonType = 'dichip' | 'trichip'
+type SearchOptionButtonType = 'dichip' | 'trichip' | 'search'
 type SortValues = 'popular' | 'created' | 'updated'
-type FilterValues = {
+type FilterValue = {
     name: string,
     type: SearchOptionButtonType,
     value: string
@@ -586,7 +586,8 @@ type SortOptions = Array<{
 }>
 type FilterOptions = Array<{
     groupName: string,
-    values: Array<FilterValues>
+    max?: number
+    values: Array<FilterValue>
 }>
 export const searchOptions = (): [SortOptions, FilterOptions] => {
     let groupNames: Array<string>
@@ -598,7 +599,7 @@ export const searchOptions = (): [SortOptions, FilterOptions] => {
     let filterOptions: FilterOptions = groupNames.map(element => {
         return {
             groupName: `${element[0].toUpperCase()}${element.slice(1).toLowerCase()}`,
-            values: tagList.filter(tag => tag.group === element).map((filteredTag): FilterValues => {
+            values: tagList.filter(tag => tag.group === element).map((filteredTag): FilterValue => {
                 return {
                     name: filteredTag.name,
                     type: 'trichip',
@@ -606,6 +607,22 @@ export const searchOptions = (): [SortOptions, FilterOptions] => {
                 }
             })
         }
+    })
+    filterOptions.push({
+        groupName: 'Tag Mode',
+        max: 1,
+        values: [
+            {
+                name: 'And',
+                type: 'dichip',
+                value: 'AND'
+            },
+            {
+                name: 'Or',
+                type: 'dichip',
+                value: 'OR'
+            }
+        ]
     })
     filterOptions.push({
         groupName: 'Original Language',
@@ -722,4 +739,13 @@ export const searchOptions = (): [SortOptions, FilterOptions] => {
         ],
         filterOptions
     ]
+}
+type SortResults = Array<string>
+type FilterResults = Array<{
+    groupName: string,
+    values: Array<string>
+}>
+type Card = {
+    name: string,
+    cover: string
 }
